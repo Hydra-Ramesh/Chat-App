@@ -25,14 +25,12 @@ export const signup = async (req, res) => {
       // Generate JWT token
       generateToken(newUser._id, res);
       await newUser.save();
-      res
-        .status(201)
-        .json({
-          _id: newUser._id,
-          email: newUser.email,
-          profilePic: newUser.profilePic,
-          message: "User registered successfully",
-        });
+      res.status(201).json({
+        _id: newUser._id,
+        email: newUser.email,
+        profilePic: newUser.profilePic,
+        message: "User registered successfully",
+      });
     } else {
       res.status(400).json({ message: "Failed to register user" });
     }
@@ -82,28 +80,33 @@ export const logout = async (req, res) => {
   }
 };
 
-
 export const updateProfile = async (req, res) => {
-    try{
-        const {profilePic} = req.body;
-        const userId = req.user._id;
-        if(!profilePic){
-            return res.status(400).json({message:"Please provide a profile picture"});
-        }
-        const uploadResponse = await cloudinary.uploader.upload(profilePic);
-        const updatedUser = await User.findByIdAndUpdate(userId, {profilePic: uploadResponse.secure_url}, {new:true});
-        res.status(200).json(updatedUser);
-    }catch (e) {
-        console.error(e);
-        res.status(500).send("Error in Update Profile Controller");
+  try {
+    const { profilePic } = req.body;
+    const userId = req.user._id;
+    if (!profilePic) {
+      return res
+        .status(400)
+        .json({ message: "Please provide a profile picture" });
     }
-}
+    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePic: uploadResponse.secure_url },
+      { new: true }
+    );
+    res.status(200).json(updatedUser);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error in Update Profile Controller");
+  }
+};
 
 export const checkAuth = async (req, res) => {
-    try{
-        res.status(200).json(req.user);
-    }catch (e) {
-        console.error(e);
-        res.status(500).send("Error in Check Auth Controller");
-    }
-}
+  try {
+    res.status(200).json(req.user);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error in Check Auth Controller");
+  }
+};
