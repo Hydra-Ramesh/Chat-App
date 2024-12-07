@@ -1,12 +1,14 @@
 import cloudinary from "../lib/cloudinary.js";
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
+
+// Get all users for the sidebar, excluding the logged-in user
 export const getUserForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
     const filterUsers = await User.find({
       _id: { $ne: loggedInUserId },
-    }).select("-password");
+    }).select("-password"); // Exclude password field
     res.status(200).json(filterUsers);
   } catch (e) {
     console.error(e);
@@ -14,40 +16,51 @@ export const getUserForSidebar = async (req, res) => {
   }
 };
 
+// Get messages between the logged-in user and a specific user
 export const getMessage = async (req, res) => {
   try {
-    const { id: userToChatId } = req.params;
+    const { id: userToChatId } = req.params; // The other user's ID
     const myId = req.user._id;
 
-    const message = await Message.fine({
+    const messages = await Message.find({
       $or: [
-        { sender: myId, receiver: userToChatId },
-        { sender: userToChatId, receiver: myId },
+        { senderId: myId, receiverId: userToChatId },
+        { senderId: userToChatId, receiverId: myId },
       ],
-    });
-    res.status(200).json(message);
+    }).sort({ createdAt: 1 }); // Sort messages by timestamp
+
+    res.status(200).json(messages);
   } catch (e) {
     console.error(e);
     res.status(500).send("Error in Get Message Controller");
   }
 };
 
+// Send a message
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
-    const { id: receiverId } = req.params;
+    const { text, image } = req.body; // Message content
+    const { id: receiverId } = req.params; // Receiver's user ID
     const senderId = req.user._id;
+
     let imageUrl;
     if (image) {
-      const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(image);
+        imageUrl = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.error("Cloudinary upload error:", uploadError);
+        return res.status(500).send("Image upload failed");
+      }
     }
+
     const newMessage = new Message({
       senderId,
       receiverId,
       text,
       image: imageUrl,
     });
+
     await newMessage.save();
     res.status(201).json(newMessage);
   } catch (e) {
